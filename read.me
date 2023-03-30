@@ -1,0 +1,103 @@
+/etc/ansible/hosts
+[servers]
+server1 ansible_host=10.39.39.11# ansible_user=root
+server2 ansible_host=10.39.139.12# ansible_user=root
+server3 ansible_host=10.39.139.13# ansible_user=root
+
+[servers:vars]
+ansible_python_interpreter=/usr/bin/python3
+
+/etc/ansible/ansible.conf
+[defaults]
+
+# some basic default values...
+
+inventory      = /root/ansible/hosts
+remote_tmp     = /root/ansible/tmp
+forks          = 150
+sudo_user      = root
+transport      = smart
+gathering = smart
+
+# additional paths to search for roles in, colon separated
+roles_path    = /root/ansible/roles
+
+# uncomment this to disable SSH key host checking
+host_key_checking = False
+
+# logging is off by default unless this path is defined
+# if so defined, consider logrotate
+log_path = /var/log/ansible.log
+
+# default module name for /usr/bin/ansible
+module_name = shell
+
+# set plugin path directories here, separate with colons
+action_plugins     = /usr/share/ansible_plugins/action_plugins:/root/ansible/plugins/action_plugins
+callback_plugins   = /usr/share/ansible_plugins/callback_plugins:/root/ansible/plugins/callback_plugins
+connection_plugins = /usr/share/ansible_plugins/connection_plugins:/root/ansible/plugins/connection_plugins
+lookup_plugins     = /usr/share/ansible_plugins/lookup_plugins:/root/ansible/plugins/lookup_plugins
+vars_plugins       = /usr/share/ansible_plugins/vars_plugins:/root/ansible/plugins/vars_plugins
+filter_plugins     = /usr/share/ansible_plugins/filter_plugins:/root/ansible/plugins/filter_plugins
+
+
+ca_file_path = /usr/share/ca-certificates/cacert.org/cacert.org.crt
+
+fact_caching = jsonfile
+fact_caching_connection = /root/ansible/facts
+fact_caching_timeout = 600
+
+# retry files
+#retry_files_enabled = False
+retry_files_save_path = /root/ansible/retry
+
+[privilege_escalation]
+#become=True
+#become_method=sudo
+#become_user=root
+#become_ask_pass=False
+
+[ssh_connection]ssh_args = -o ControlMaster=auto -o ControlPersist=60s
+
+# The path to use for the ControlPath sockets. This defaults to
+# "%(directory)s/ansible-ssh-%%h-%%p-%%r", however on some systems with
+# very long hostnames or very long path names (caused by long user names or 
+# deeply nested home directories) this can exceed the character limit on
+# file socket names (108 characters for most platforms). In that case, you 
+# may wish to shorten the string below.
+# 
+# Example: 
+# control_path = %(directory)s/%%h-%%r
+control_path = %(directory)s/ansible-ssh-%%h-%%p-%%r
+
+# Enabling pipelining reduces the number of SSH operations required to 
+# execute a module on the remote server. This can result in a significant 
+# performance improvement when enabled, however when using "sudo:" you must 
+# first disable 'requiretty' in /etc/sudoers
+#
+# By default, this option is disabled to preserve compatibility with
+# sudoers configurations that have requiretty (the default on many distros).
+# 
+pipelining = True
+
+# if True, make ansible use scp if the connection type is ssh 
+# (default is sftp)
+scp_if_ssh = True
+
+[accelerate]
+accelerate_port = 5099
+accelerate_timeout = 30
+accelerate_connect_timeout = 5.0
+
+accelerate_daemon_timeout = 30
+
+
+# ssh arguments to use
+# Leaving off ControlPersist will result in poor performance, so use 
+# paramiko on older platforms rather than removing it
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s
+
+
+
+ansible-playbook playbook.yml -u all -k
+password:toortoor
