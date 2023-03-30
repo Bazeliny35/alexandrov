@@ -1,0 +1,159 @@
+- hosts: all
+  become: true
+  remote_user: root
+  gather_facts: false
+  vars:
+    create_user: playbook
+    copy_local_key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+    sys_packages: [ 'curl', 'vim', 'git', 'ufw' ]
+ 
+    container_count: 4
+    default_container_name: docker
+    default_container_image: ubuntu
+    default_container_command: sleep 1d
+
+  tasks:
+    - name: group
+      group: 
+        name: server
+        state: present
+
+    - name: Update apt-get repo and cache
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+
+    - name: Install required system packages
+      apt: name=curl state=latest
+
+    - name: Install required system packages
+      apt: name=ufw state=latest
+
+    - name: Install required system packages
+      apt: name=ssh state=latest
+
+    - name: Create a new regular user
+      user:
+        name: "{{ create_user }}"
+        groups: 
+        shell: /bin/bash
+    
+    - name: Allow 'playbook' group to have passwordless sudo
+      lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: '^%playbook'
+        line: '%playbook ALL=(ALL) NOPASSWD: ALL'
+        validate: '/usr/sbin/visudo -cf %s'
+
+#    - name: Port 22 > Port 1723
+#      lineinfile:
+#        path: /etc/ssh/sshd_config
+#        state: present
+#        regexp: '#Port 22'
+#       line: 'Port 1723'
+
+#    - name: authorized
+#      lineinfile:
+#        path: /etc/ssh/sshd_config
+#        state: present
+#        regexp: 'PasswordAuthentication yes'
+#       line: 'PasswordAuthentication no'
+
+#    - name: Set authorized key for remote user
+#      authorized_key:
+#        user: "{{ create_user }}"
+#        state: present
+#        key: "{{ copy_local_key }}"
+
+    - name: UFW - Allow 22 connections
+      ufw:
+        rule: allow
+        port: 22
+        proto: tcp
+
+    - name: UFW - Allow 80 connections
+      ufw:
+        rule: allow
+        port: 80
+        proto: tcp
+
+    - name: UFW - Allow 8080 connections
+      ufw:
+        rule: allow
+        port: 8080
+        proto: tcp
+
+    - name: UFW - Allow 1723 connections
+      ufw:
+        rule: allow
+        port: 1723
+        proto: tcp
+
+    - name: UFW - Deny all other incoming traffic by default
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+    - name: Install aptitude
+      apt:
+        name: aptitude
+        state: latest
+        update_cache: true
+
+    - name: Install required system packages
+      apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+        state: latest
+        update_cache: true
+
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Update apt and install docker-ce
+      apt:
+        name: docker-ce
+        state: latest
+        update_cache: true
+
+    - name: Install Docker Module for Python
+      pip:
+        name: docker
+
+    - name: Pull default Docker image
+      docker_image:
+        name: "{{ default_container_image }}"
+        source: pull
+
+    - name: Restart service ufw    
+      systemd:
+        name: ufw
+        state: reloaded
+
+    - name: Restart service ssh
+      systemd:
+        name: ssh
+        state: reloaded
+
+    - name: Reboot host and wait for it to restart
+      reboot:
+        msg: "Reboot initiated by Ansible"
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: whoami
+        notify: Reboot host and wait for it to restart
+
